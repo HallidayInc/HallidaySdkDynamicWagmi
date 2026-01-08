@@ -13,10 +13,16 @@ function App() {
   const { data: walletClient, isSuccess } = useWalletClient();
 
   const launchHalliday = async () => {
-    if (!isConnected || !isSuccess || !walletClient || !address) return;
+    if (!isConnected || !address) return;
 
-    // Remember to add Base in the Dynamic dashboard beforehand (see README)
-    const connectedWalletClient = connectWalletClient(() => walletClient);
+    let connectedWalletClient;
+    if (walletClient && isSuccess) {
+      // Remember to add Base in the Dynamic dashboard beforehand (see README)
+      connectedWalletClient = connectWalletClient(() => walletClient);
+    } else {
+      // Using window.ethereum EIP-1193 wallet like MetaMask via Dynamic
+      connectedWalletClient = window.ethereum;
+    }
 
     openHallidayPayments({
       apiKey: HALLIDAY_PUBLIC_API_KEY,
