@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { useDynamicContext, useIsLoggedIn } from '@dynamic-labs/sdk-react-core'
 import { useAccount, useWalletClient } from 'wagmi'
-import { openHallidayPayments } from '@halliday-sdk/payments'
+import { openHallidayPayments, initializeClient } from '@halliday-sdk/payments'
 import { connectWalletClient } from '@halliday-sdk/payments/viem'
 import './App.css'
 
@@ -11,6 +12,14 @@ function App() {
   const isLoggedIn = useIsLoggedIn();
   const { address, isConnected } = useAccount();
   const { data: walletClient, isSuccess } = useWalletClient();
+
+  useEffect(() => {
+    initializeClient({
+      apiKey: HALLIDAY_PUBLIC_API_KEY,
+      onReady: () => { console.log('Preloaded and ready'); },
+      onError: (error) => { console.error(error); },
+    });
+  }, []);
 
   const launchHalliday = async () => {
     if (!isConnected || !address) return;
