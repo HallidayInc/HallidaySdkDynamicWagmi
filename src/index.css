@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+button,
+span {
+  display: block;
+  margin: auto;
+  text-align: center;
+  line-height: 25px;
+}
