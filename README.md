@@ -14,7 +14,7 @@ This example app implements swaps on Base chain. The Dynamic account must have B
 
 ### Run
 
-Edit the `.env` file by inserting the Dynamic and Halliday keys.
+Create and edit the `.env` file and insert the Dynamic and Halliday keys. See `.env.example` for details.
 
 ```
 VITE_DYNAMIC_ENVIRONMENT_ID=_your_dynamic_environment_id_here_

@@ -1,23 +1,27 @@
-import { useEffect } from 'react'
 import { http } from 'viem'
 import { mainnet, base } from 'viem/chains'
-import { createConfig, WagmiProvider, useWalletClient, useSwitchChain } from 'wagmi'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { DynamicContextProvider, overrideNetworkRpcUrl, useDynamicContext } from '@dynamic-labs/sdk-react-core'
+import { createConfig, WagmiProvider, useWalletClient } from 'wagmi'
+import { DynamicContextProvider, useDynamicContext } from '@dynamic-labs/sdk-react-core'
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum'
 import { DynamicWagmiConnector } from '@dynamic-labs/wagmi-connector'
-import { initializeClient, openHallidayPayments } from '@halliday-sdk/payments'
+import {
+  initializeClient,
+  openHallidayPayments,
+  openWithdraw,
+  openActivity,
+} from '@halliday-sdk/payments'
 import { connectWalletClient } from '@halliday-sdk/payments/viem'
 
-const hallidayOutputs = [
+const HALLIDAY_API_KEY = import.meta.env.VITE_HALLIDAY_API_KEY
+
+if (!HALLIDAY_API_KEY) {
+  alert('HALLIDAY_API_KEY is missing!')
+}
+
+const tokens = [
   'base:0x',
   'base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
 ]
-
-const rpcOverrides = {
-  '1': ['https://cloudflare-eth.com'],
-  '8453': ['https://mainnet.base.org'],
-}
 
 const wagmiConfig = createConfig({
   chains: [mainnet, base],
@@ -28,46 +32,47 @@ const wagmiConfig = createConfig({
   },
 })
 
-const queryClient = new QueryClient()
-
 initializeClient({
-  apiKey: import.meta.env.VITE_HALLIDAY_API_KEY,
-  outputs: hallidayOutputs,
+  apiKey: HALLIDAY_API_KEY,
+  outputs: tokens,
+  onReady: () => console.log('Halliday preloaded and ready'),
+  onError: (error) => console.error('Halliday init error:', error),
 })
 
-function InitDepositFlow() {
+function HallidayActions() {
   const { primaryWallet, setShowAuthFlow, handleLogOut } = useDynamicContext()
   const { data: walletClient } = useWalletClient()
-  const { switchChain } = useSwitchChain()
 
-  useEffect(() => {
-    if (!walletClient || !primaryWallet) return
+  const enabled = !!primaryWallet && !!walletClient
+  const userWallet = walletClient ? connectWalletClient(() => walletClient) : null
 
-    if (walletClient.chain.id !== base.id) {
-      switchChain({ chainId: base.id })
-      return
-    }
-
-    console.log('wagmi WalletClient:', walletClient)
-
-    const userWallet = connectWalletClient(() => walletClient)
-
-    openHallidayPayments({
-      apiKey: import.meta.env.VITE_HALLIDAY_API_KEY,
-      outputs: hallidayOutputs,
-      userWallet,
-      destinationAddress: primaryWallet.address,
-    })
-  }, [walletClient, primaryWallet, switchChain])
-
-  if (!primaryWallet) {
-    return <button onClick={() => setShowAuthFlow(true)}>Open Halliday</button>
+  const onConnect = () => {
+    if (primaryWallet) handleLogOut()
+    else setShowAuthFlow(true)
   }
 
+  const onDeposit = () =>
+    openHallidayPayments({
+      userWallet,
+      destinationAddress: primaryWallet.address
+    })
+
+  const onWithdraw = () =>
+    openWithdraw({
+      withdrawInputs: tokens,
+      withdrawFunder: userWallet,
+      // withdrawDestinationAddress: '0x...', // User can set this too
+    })
+
   return (
-    <div>
-      <span>Dynamic wallet address: {primaryWallet.address}</span>
-      <button onClick={handleLogOut}>Log out of Dynamic</button>
+    <div className="halliday-container">
+      <h1>Halliday SDK Dynamic Wagmi Example</h1>
+      <button onClick={onConnect}>
+        {primaryWallet ? 'Disconnect' : 'Connect'}
+      </button>
+      <button disabled={!enabled} onClick={onDeposit}>Deposit with Halliday</button>
+      <button disabled={!enabled} onClick={onWithdraw}>Withdraw</button>
+      <button disabled={!enabled} onClick={openActivity}>Activity</button>
     </div>
   )
 }
@@ -78,17 +83,12 @@ export default function App() {
       settings={{
         environmentId: import.meta.env.VITE_DYNAMIC_ENVIRONMENT_ID,
         walletConnectors: [EthereumWalletConnectors],
-        overrides: {
-          evmNetworks: (networks) => overrideNetworkRpcUrl(networks, rpcOverrides),
-        },
       }}
     >
       <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <DynamicWagmiConnector>
-            <InitDepositFlow />
-          </DynamicWagmiConnector>
-        </QueryClientProvider>
+        <DynamicWagmiConnector>
+          <HallidayActions />
+        </DynamicWagmiConnector>
       </WagmiProvider>
     </DynamicContextProvider>
   )
