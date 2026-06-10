@@ -64,6 +64,9 @@ function HallidayActions() {
       // withdrawDestinationAddress: '0x...', // User can set this too
     })
 
+  // Note openActivity cannot be properly called until a userWallet, funder or 
+  // owner is provided to initializeClient or openHallidayPayments
+
   return (
     <div className="halliday-container">
       <h1>Halliday SDK Dynamic Wagmi Example</h1>
